@@ -1,0 +1,34 @@
+# Dependencies
+node_modules/
+*/node_modules/
+package-lock.json.bak
+
+# Production builds
+dist/
+build/
+*/dist/
+*/build/
+
+# Local Environment Variables & Secrets
+.env
+.env.*
+*.env
+!.env.example
+!*/.env.example
+
+# Restricted Transcript Archives and Datasets (Do NOT commit)
+transcripts/
+cold-call-transcripts-100/
+*.txt
+scratch/
+
+# Deployment & IDE artifacts
+.vercel
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
