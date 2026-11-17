@@ -201,7 +201,7 @@ export default function HomePage() {
 
         {/* Brand Panel Footer */}
         <div className="relative z-10 pt-8 border-t border-white/10 text-xs text-slate-500 flex items-center justify-between">
-          <span>DeepThought CultureTech FDE Recruitment Challenge</span>
+          <span>Cold Call Copilot</span>
           <span className="font-mono text-[10px] text-slate-400">v1.0.0</span>
         </div>
       </div>

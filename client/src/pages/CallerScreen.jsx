@@ -139,8 +139,8 @@ export default function CallerScreen() {
       console.warn('AI Suggestion error:', err);
       // Fallback helpful contextual suggestion if API offline
       const fallbackTips = {
-        1: `Reach the person: "Hi ${call?.prospect_name || 'there'}, this is calling from DeepThought regarding your manufacturing operations. Did I catch you at a workable moment?"`,
-        2: `State purpose in one repeatable line: "We help manufacturing leaders unlock capacity and eliminate production bottlenecks through our AI OS layer on top of ERP."`,
+        1: `Reach the person: "Hi ${call?.prospect_name || 'there'}, this is calling regarding your manufacturing operations. Did I catch you at a workable moment?"`,
+        2: `State purpose in one repeatable line: "We help manufacturing leaders unlock capacity and eliminate production bottlenecks through a practical AI-enabled workflow."`,
         3: `Secure permission: "I know you weren't expecting my call. Do you have two minutes to see if this is relevant, or would later today after 2 PM be better?"`,
         4: `Ask about their company first: "Before I say anything about our platform, could you tell me a little about your plant operations and what products you focus on?"`,
         5: `Crucial — Listen and record: Ask what their biggest bottleneck or growth target is right now. Write down their exact words without interpreting.`,

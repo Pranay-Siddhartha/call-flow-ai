@@ -1,9 +1,6 @@
 /**
  * Authentication Service & Integration Point
- * 
- * Note: The DeepThought FDE challenge specification focuses on caller-facing
- * workflows and data persistence (Supabase tables for calls and stage_results).
- * 
+ *
  * This module defines the client-side authentication contract and integration
  * point for connecting Supabase Auth (`supabase.auth.signInWithPassword`) or a
  * custom backend endpoint (`POST /api/auth/login`).

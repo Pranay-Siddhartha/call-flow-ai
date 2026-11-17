@@ -2,9 +2,22 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 
-const PORT = process.env.PORT || 3001;
+const PORT = Number(process.env.PORT || 3001);
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
 const isDev = process.env.NODE_ENV !== 'production';
+const allowedOrigins = new Set([
+  FRONTEND_URL,
+  'http://localhost:5173',
+  'http://localhost:3000',
+  'http://127.0.0.1:5173',
+  'http://127.0.0.1:3000'
+]);
+
+(process.env.CORS_ALLOWED_ORIGINS || '')
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean)
+  .forEach((origin) => allowedOrigins.add(origin));
 
 const defaultSupabase = require('./lib/supabase');
 const defaultAiService = require('./lib/ai');
@@ -21,14 +34,14 @@ function createApp({ supabaseClient = defaultSupabase, aiService = defaultAiServ
       if (isDev || !origin) {
         return callback(null, true);
       }
-      if (origin === FRONTEND_URL || origin.startsWith('http://localhost:')) {
+      if (allowedOrigins.has(origin)) {
         return callback(null, true);
       }
       return callback(new Error(`Origin ${origin} not allowed by CORS`));
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization']
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
   }));
 
   app.use(express.json());
@@ -68,7 +81,7 @@ const app = createApp();
 
 // Start the server if executed directly
 if (require.main === module) {
-  app.listen(PORT, () => {
+  app.listen(PORT, '0.0.0.0', () => {
     console.log(`Cold Call Copilot API running on port ${PORT}`);
     console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
     console.log(`Frontend URL: ${FRONTEND_URL}`);

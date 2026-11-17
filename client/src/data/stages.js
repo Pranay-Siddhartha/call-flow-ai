@@ -1,9 +1,5 @@
 /**
  * Cold Call Stages Configuration
- * Authoritative 8 stages from DeepThought CultureTech FDE Assignment:
- * https://sainikpuri.deepthought.education/fde-hyderabad-v2/structure
- * Reference Screen:
- * https://sainikpuri.deepthought.education/fde-hyderabad-v2/reference
  *
  * Evidence-based examples and stage outcomes extracted from analysis of
  * 100 actual cold-call transcripts (T001-T100).

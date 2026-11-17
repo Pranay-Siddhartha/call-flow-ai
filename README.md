@@ -1,7 +1,6 @@
-# Cold Call Copilot — DeepThought FDE Challenge
+# Cold Call Copilot
 
-> A live, caller-facing cold-call companion application built for the **DeepThought CultureTech Forward Deployed Engineer (FDE)** recruitment assignment.
-> Designed to sit beside a salesperson during live telephone conversations with enterprise prospects, providing structured stage navigation, evidence-based prospect responses, one-tap outcome logging, verbatim word capture, and real-time AI coaching.
+> A live, caller-facing cold-call companion application designed to sit beside a salesperson during live telephone conversations with enterprise prospects, providing structured stage navigation, evidence-based prospect responses, one-tap outcome logging, verbatim word capture, and real-time AI coaching.
 
 ---
 
@@ -16,7 +15,7 @@
 
 ## 📋 The 8-Stage Cold Call Structure
 
-Following the authoritative DeepThought call structure ([deepthought.education/fde-hyderabad-v2/structure](https://sainikpuri.deepthought.education/fde-hyderabad-v2/structure)) and empirical analysis of **100 cold-call transcripts** (`T001–T100`), the application guides callers through all eight stages:
+Following a structured eight-stage cold-call framework and empirical analysis of **100 cold-call transcripts** (`T001–T100`), the application guides callers through all eight stages:
 
 | # | Stage | Purpose | Transcript-Derived Typical Reactions | One-Tap Controls |
 |---|-------|---------|--------------------------------------|------------------|
@@ -112,9 +111,11 @@ cp .env.example .env
 # Edit .env with your credentials:
 # SUPABASE_URL=https://your-project.supabase.co
 # SUPABASE_SERVICE_KEY=your-supabase-service-role-key
+# SUPABASE_SERVICE_ROLE_KEY=your-supabase-service-role-key  # optional alias
 # GEMINI_API_KEY=your-gemini-api-key
 # PORT=3001
 # FRONTEND_URL=http://localhost:5173
+# CORS_ALLOWED_ORIGINS=http://localhost:5173,http://localhost:3000
 
 # Start development server
 npm run dev
@@ -157,9 +158,10 @@ Visit `http://localhost:5173` to test the full caller interface.
    - `NODE_ENV`: `production`
    - `PORT`: `10000`
    - `SUPABASE_URL`: `https://your-project.supabase.co`
-   - `SUPABASE_SERVICE_KEY`: `your-service-role-key`
+   - `SUPABASE_SERVICE_KEY`: `your-service-role-key` (or `SUPABASE_SERVICE_ROLE_KEY` if that is the name in your Supabase dashboard)
    - `GEMINI_API_KEY`: `your-gemini-api-key`
    - `FRONTEND_URL`: `https://your-app.vercel.app`
+   - `CORS_ALLOWED_ORIGINS`: `https://your-app.vercel.app`
 5. Click **Create Web Service**. Verify `https://<render-url>/api/health`.
 
 ### Frontend (Vercel)
@@ -172,6 +174,24 @@ Visit `http://localhost:5173` to test the full caller interface.
 3. Add Environment Variable:
    - `VITE_API_URL`: `https://<your-render-url>/api`
 4. Deploy. Vercel SPA routing is configured automatically via `client/vercel.json`.
+
+### Environment Variable Reference
+
+Render (backend):
+- `SUPABASE_URL`
+- `SUPABASE_SERVICE_KEY` or `SUPABASE_SERVICE_ROLE_KEY`
+- `GEMINI_API_KEY`
+- `FRONTEND_URL`
+- `CORS_ALLOWED_ORIGINS`
+- `NODE_ENV=production`
+- `PORT=10000`
+
+Vercel (frontend):
+- `VITE_API_URL=https://<your-render-url>/api`
+
+Local development:
+- `server/.env` with `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`, `GEMINI_API_KEY`, `FRONTEND_URL`, `PORT`, `CORS_ALLOWED_ORIGINS`
+- `client/.env` with `VITE_API_URL=http://localhost:3001/api`
 
 ---
 

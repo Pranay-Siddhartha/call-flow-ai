@@ -1,6 +1,6 @@
 -- ============================================
 -- Cold Call Copilot — Supabase Database Schema
--- DeepThought CultureTech FDE Recruitment Challenge
+-- Cold Call Copilot schema
 -- ============================================
 -- Run this SQL in the Supabase SQL Editor to set up the database.
 
