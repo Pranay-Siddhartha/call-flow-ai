@@ -65,7 +65,7 @@ export function useCall(callId) {
   }, [loadCallData]);
 
   /**
-   * Save result for a given stage with optimistic update
+   * Save a stage result and advance only after the server confirms persistence.
    */
   const saveStage = useCallback(
     async ({ stageNumber, outcome, prospectWords, callerNotes, aiSuggestion }) => {
@@ -82,19 +82,6 @@ export function useCall(callId) {
         created_at: new Date().toISOString(),
       };
 
-      // Optimistic update for stageResults
-      setStageResults((prev) => {
-        const filtered = prev.filter((s) => Number(s.stage_number) !== stageNum);
-        return [...filtered, newStageRecord].sort((a, b) => a.stage_number - b.stage_number);
-      });
-
-      // Calculate next stage
-      const nextStage = stageNum < 8 ? stageNum + 1 : 8;
-      setCurrentStage(nextStage);
-
-      // Optimistic update for call current_stage
-      setCall((prev) => (prev ? { ...prev, current_stage: nextStage } : null));
-
       try {
         const res = await apiSaveStageResult(callId, {
           stage_number: stageNum,
@@ -105,16 +92,20 @@ export function useCall(callId) {
         });
 
         const savedRecord = res?.data || res?.stage || res;
-        if (savedRecord && savedRecord.id) {
-          setStageResults((prev) =>
-            prev.map((s) => (Number(s.stage_number) === stageNum ? { ...s, ...savedRecord } : s))
-          );
-        }
+        const persistedRecord = savedRecord && savedRecord.id
+          ? { ...newStageRecord, ...savedRecord }
+          : newStageRecord;
+        setStageResults((prev) => {
+          const filtered = prev.filter((stage) => Number(stage.stage_number) !== stageNum);
+          return [...filtered, persistedRecord].sort((a, b) => a.stage_number - b.stage_number);
+        });
+
+        const nextStage = Math.min(stageNum + 1, 8);
+        setCall((prev) => (prev ? { ...prev, current_stage: nextStage } : null));
         return savedRecord;
       } catch (err) {
         console.error('Failed to persist stage result to backend:', err);
-        // Note: we keep the optimistic update so the caller can still proceed in offline/dev mode
-        return newStageRecord;
+        throw err;
       }
     },
     [callId]
@@ -134,9 +125,6 @@ export function useCall(callId) {
         ended_at: new Date().toISOString(),
       };
 
-      // Optimistic update
-      setCall((prev) => (prev ? { ...prev, ...payload } : null));
-
       try {
         const res = await apiCloseCall(callId, payload);
         const updated = res?.data || res?.call || res;
@@ -146,7 +134,7 @@ export function useCall(callId) {
         return updated;
       } catch (err) {
         console.error('Failed to close call on backend:', err);
-        return payload;
+        throw err;
       }
     },
     [callId]

@@ -83,7 +83,7 @@ const OUTCOMES = [
  * @param {Function} onEnd Callback when user confirms ending call ({ final_outcome, notes })
  * @param {boolean} isSubmitting Loading state while saving
  */
-export default function CallEndModal({ isOpen, onClose, onEnd, isSubmitting = false }) {
+export default function CallEndModal({ isOpen, onClose, onEnd, isSubmitting = false, error = null }) {
   const [selectedOutcome, setSelectedOutcome] = useState('meeting_booked');
   const [notes, setNotes] = useState('');
 
@@ -143,6 +143,12 @@ export default function CallEndModal({ isOpen, onClose, onEnd, isSubmitting = fa
 
         {/* Modal Form */}
         <form onSubmit={handleSubmit} className="p-6 space-y-5">
+          {error && (
+            <p role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">
+              {error}
+            </p>
+          )}
+
           {/* Outcome Radio / Card Group */}
           <div>
             <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-2.5">

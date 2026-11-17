@@ -1,14 +1,19 @@
 const express = require('express');
-const router = express.Router();
-const supabase = require('../lib/supabase');
-const { getCallSummary } = require('../lib/ai');
+const defaultSupabase = require('../lib/supabase');
+const defaultAiService = require('../lib/ai');
+const { sendDatabaseError } = require('../lib/httpErrors');
 
-// POST /api/calls
-router.post('/', async (req, res, next) => {
+function createCallsRouter({
+  supabaseClient = defaultSupabase,
+  aiService = defaultAiService
+} = {}) {
+  const router = express.Router();
+
+  router.post('/', async (req, res, next) => {
   try {
     const { prospect_name, prospect_company } = req.body || {};
 
-    const { data, error } = await supabase
+    const { data, error } = await supabaseClient
       .from('calls')
       .insert([
         {
@@ -22,7 +27,7 @@ router.post('/', async (req, res, next) => {
       .single();
 
     if (error) {
-      return res.status(500).json({ error: error.message });
+      return sendDatabaseError(res, error);
     }
 
     return res.status(201).json(data);
@@ -31,12 +36,11 @@ router.post('/', async (req, res, next) => {
   }
 });
 
-// GET /api/calls
-router.get('/', async (req, res, next) => {
+  router.get('/', async (req, res, next) => {
   try {
     const { status } = req.query;
 
-    let query = supabase
+    let query = supabaseClient
       .from('calls')
       .select(`
         *,
@@ -57,7 +61,7 @@ router.get('/', async (req, res, next) => {
 
     if (error) {
       // Fallback query in case relationship is not recognized
-      let fallbackQuery = supabase
+      let fallbackQuery = supabaseClient
         .from('calls')
         .select('*')
         .order('started_at', { ascending: false });
@@ -68,7 +72,7 @@ router.get('/', async (req, res, next) => {
 
       const fallbackResult = await fallbackQuery;
       if (fallbackResult.error) {
-        return res.status(500).json({ error: fallbackResult.error.message });
+        return sendDatabaseError(res, fallbackResult.error);
       }
 
       data = fallbackResult.data || [];
@@ -90,12 +94,11 @@ router.get('/', async (req, res, next) => {
   }
 });
 
-// GET /api/calls/:id
-router.get('/:id', async (req, res, next) => {
+  router.get('/:id', async (req, res, next) => {
   try {
     const { id } = req.params;
 
-    const { data: call, error: callError } = await supabase
+    const { data: call, error: callError } = await supabaseClient
       .from('calls')
       .select('*')
       .eq('id', id)
@@ -105,21 +108,21 @@ router.get('/:id', async (req, res, next) => {
       if (callError.code === 'PGRST116') {
         return res.status(404).json({ error: 'Call not found' });
       }
-      return res.status(500).json({ error: callError.message });
+      return sendDatabaseError(res, callError);
     }
 
     if (!call) {
       return res.status(404).json({ error: 'Call not found' });
     }
 
-    const { data: stageResults, error: stagesError } = await supabase
+    const { data: stageResults, error: stagesError } = await supabaseClient
       .from('stage_results')
       .select('*')
       .eq('call_id', id)
       .order('stage_number', { ascending: true });
 
     if (stagesError) {
-      return res.status(500).json({ error: stagesError.message });
+      return sendDatabaseError(res, stagesError);
     }
 
     return res.json({
@@ -131,8 +134,7 @@ router.get('/:id', async (req, res, next) => {
   }
 });
 
-// PATCH /api/calls/:id/close
-router.patch('/:id/close', async (req, res, next) => {
+  router.patch('/:id/close', async (req, res, next) => {
   try {
     const { id } = req.params;
     const { final_outcome, status } = req.body || {};
@@ -146,7 +148,7 @@ router.patch('/:id/close', async (req, res, next) => {
       updatePayload.final_outcome = final_outcome;
     }
 
-    const { data: updatedCall, error: updateError } = await supabase
+    const { data: updatedCall, error: updateError } = await supabaseClient
       .from('calls')
       .update(updatePayload)
       .eq('id', id)
@@ -157,7 +159,7 @@ router.patch('/:id/close', async (req, res, next) => {
       if (updateError.code === 'PGRST116') {
         return res.status(404).json({ error: 'Call not found' });
       }
-      return res.status(500).json({ error: updateError.message });
+      return sendDatabaseError(res, updateError);
     }
 
     if (!updatedCall) {
@@ -165,7 +167,7 @@ router.patch('/:id/close', async (req, res, next) => {
     }
 
     // Fetch all stage results for this call
-    const { data: stageResults, error: stagesError } = await supabase
+    const { data: stageResults, error: stagesError } = await supabaseClient
       .from('stage_results')
       .select('*')
       .eq('call_id', id)
@@ -175,10 +177,10 @@ router.patch('/:id/close', async (req, res, next) => {
 
     if (!stagesError && stageResults) {
       try {
-        const summary = await getCallSummary(stageResults);
+        const summary = await aiService.getCallSummary(stageResults);
 
         if (summary) {
-          const { data: callWithSummary, error: summaryError } = await supabase
+          const { data: callWithSummary, error: summaryError } = await supabaseClient
             .from('calls')
             .update({ call_summary: summary })
             .eq('id', id)
@@ -203,6 +205,9 @@ router.patch('/:id/close', async (req, res, next) => {
   } catch (err) {
     next(err);
   }
-});
+  });
 
-module.exports = router;
+  return router;
+}
+
+module.exports = createCallsRouter;

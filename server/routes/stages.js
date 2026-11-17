@@ -1,9 +1,11 @@
 const express = require('express');
-const router = express.Router();
-const supabase = require('../lib/supabase');
+const defaultSupabase = require('../lib/supabase');
+const { sendDatabaseError } = require('../lib/httpErrors');
 
-// POST /api/calls/:id/stages
-router.post(['/calls/:id/stages', '/:id/stages'], async (req, res, next) => {
+function createStagesRouter({ supabaseClient = defaultSupabase } = {}) {
+  const router = express.Router();
+
+  router.post(['/calls/:id/stages', '/:id/stages'], async (req, res, next) => {
   try {
     const { id } = req.params;
     const { stage_number, outcome, prospect_words, caller_notes, ai_suggestion } = req.body || {};
@@ -16,13 +18,13 @@ router.post(['/calls/:id/stages', '/:id/stages'], async (req, res, next) => {
       return res.status(400).json({ error: 'outcome is required' });
     }
 
-    const stageNum = parseInt(stage_number, 10);
-    if (isNaN(stageNum) || stageNum < 1 || stageNum > 8) {
+    const stageNum = Number(stage_number);
+    if (!Number.isInteger(stageNum) || stageNum < 1 || stageNum > 8) {
       return res.status(400).json({ error: 'stage_number must be an integer between 1 and 8' });
     }
 
     // Upsert the stage_result row
-    const { data: stageResult, error: stageError } = await supabase
+    const { data: stageResult, error: stageError } = await supabaseClient
       .from('stage_results')
       .upsert(
         {
@@ -41,45 +43,47 @@ router.post(['/calls/:id/stages', '/:id/stages'], async (req, res, next) => {
       .single();
 
     if (stageError) {
-      return res.status(500).json({ error: stageError.message });
+      return sendDatabaseError(res, stageError);
     }
 
     // Update calls.current_stage to stage_number + 1 (capped at 8)
     const nextStage = Math.min(stageNum + 1, 8);
-    const { error: callUpdateError } = await supabase
+    const { error: callUpdateError } = await supabaseClient
       .from('calls')
       .update({ current_stage: nextStage })
       .eq('id', id);
 
     if (callUpdateError) {
-      console.warn(`Warning: failed to update call ${id} current_stage:`, callUpdateError.message);
+      console.warn('Call current_stage update failed:', callUpdateError.code || 'unknown');
     }
 
     return res.status(200).json(stageResult);
   } catch (err) {
     next(err);
   }
-});
+  });
 
-// GET /api/calls/:id/stages
-router.get(['/calls/:id/stages', '/:id/stages'], async (req, res, next) => {
+  router.get(['/calls/:id/stages', '/:id/stages'], async (req, res, next) => {
   try {
     const { id } = req.params;
 
-    const { data, error } = await supabase
+    const { data, error } = await supabaseClient
       .from('stage_results')
       .select('*')
       .eq('call_id', id)
       .order('stage_number', { ascending: true });
 
     if (error) {
-      return res.status(500).json({ error: error.message });
+      return sendDatabaseError(res, error);
     }
 
     return res.json(data || []);
   } catch (err) {
     next(err);
   }
-});
+  });
 
-module.exports = router;
+  return router;
+}
+
+module.exports = createStagesRouter;

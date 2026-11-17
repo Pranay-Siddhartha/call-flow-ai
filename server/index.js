@@ -2,65 +2,69 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 
-const healthRouter = require('./routes/health');
-const callsRouter = require('./routes/calls');
-const stagesRouter = require('./routes/stages');
-const aiRouter = require('./routes/ai');
-
-const app = express();
 const PORT = process.env.PORT || 3001;
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
 const isDev = process.env.NODE_ENV !== 'production';
 
-// Configure CORS
-app.use(cors({
-  origin: (origin, callback) => {
-    // In development or when no origin is present (e.g. server-to-server, curl), allow
-    if (isDev || !origin) {
-      return callback(null, true);
-    }
-    // In production, allow FRONTEND_URL or localhost origins
-    if (origin === FRONTEND_URL || origin.startsWith('http://localhost:')) {
-      return callback(null, true);
-    }
-    return callback(new Error(`Origin ${origin} not allowed by CORS`));
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-}));
+const defaultSupabase = require('./lib/supabase');
+const defaultAiService = require('./lib/ai');
+const createHealthRouter = require('./routes/health');
+const createCallsRouter = require('./routes/calls');
+const createStagesRouter = require('./routes/stages');
+const createAiRouter = require('./routes/ai');
 
-// Parse JSON request body
-app.use(express.json());
+function createApp({ supabaseClient = defaultSupabase, aiService = defaultAiService } = {}) {
+  const app = express();
 
-// Mount routes
-app.use('/api/health', healthRouter);
-app.use('/api/calls', callsRouter);
-app.use('/api', stagesRouter); // Paths become /api/calls/:id/stages
-app.use('/api/ai', aiRouter);
+  app.use(cors({
+    origin: (origin, callback) => {
+      if (isDev || !origin) {
+        return callback(null, true);
+      }
+      if (origin === FRONTEND_URL || origin.startsWith('http://localhost:')) {
+        return callback(null, true);
+      }
+      return callback(new Error(`Origin ${origin} not allowed by CORS`));
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+  }));
 
-// Root route for quick verification
-app.get('/', (req, res) => {
-  res.json({
-    name: 'Cold Call Copilot API',
-    status: 'running',
-    health: '/api/health'
+  app.use(express.json());
+  app.use('/api/health', createHealthRouter());
+  app.use('/api/calls', createCallsRouter({ supabaseClient, aiService }));
+  app.use('/api', createStagesRouter({ supabaseClient }));
+  app.use('/api/ai', createAiRouter({ aiService }));
+
+  app.get('/', (req, res) => {
+    res.json({
+      name: 'Cold Call Copilot API',
+      status: 'running',
+      health: '/api/health'
+    });
   });
-});
 
-// 404 handler for unknown routes
-app.use((req, res, next) => {
-  res.status(404).json({ error: `Not Found: ${req.method} ${req.originalUrl}` });
-});
-
-// Global error handler
-app.use((err, req, res, next) => {
-  console.error('Unhandled server error:', err);
-  const status = err.status || err.statusCode || 500;
-  res.status(status).json({
-    error: err.message || 'Internal Server Error'
+  app.use((req, res, next) => {
+    res.status(404).json({ error: `Not Found: ${req.method} ${req.originalUrl}` });
   });
-});
+
+  app.use((err, req, res, next) => {
+    const status = err.status || err.statusCode || 500;
+    console.error('Unhandled server error:', { status, type: err.type || err.name || 'Error' });
+    res.status(status).json({
+      error: status >= 500
+        ? 'Internal Server Error'
+        : err.type === 'entity.parse.failed'
+        ? 'Malformed JSON request'
+        : 'Bad request'
+    });
+  });
+
+  return app;
+}
+
+const app = createApp();
 
 // Start the server if executed directly
 if (require.main === module) {
@@ -72,3 +76,4 @@ if (require.main === module) {
 }
 
 module.exports = app;
+module.exports.createApp = createApp;

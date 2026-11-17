@@ -23,19 +23,20 @@ export default function StageProgress({ currentStage = 1, stageResults = [], onS
           {STAGES.map((stage, index) => {
             const isCurrent = stage.number === currentStage;
             const isCompleted = completedStages.has(stage.number) || stage.number < currentStage;
-            const isUpcoming = !isCurrent && !isCompleted;
             const isClickable = !!onSelectStage;
 
             return (
               <React.Fragment key={stage.number}>
                 {/* Stage Step Item */}
-                <div
-                  className={`flex flex-col items-center relative z-10 group ${
-                    isClickable ? 'cursor-pointer' : ''
-                  }`}
+                <button
+                  type="button"
+                  disabled={!isClickable}
                   onClick={() => isClickable && onSelectStage(stage.number)}
-                  role={isClickable ? 'button' : undefined}
-                  tabIndex={isClickable ? 0 : undefined}
+                  aria-current={isCurrent ? 'step' : undefined}
+                  aria-label={`Stage ${stage.number}: ${stage.name}`}
+                  className={`relative z-10 flex flex-col items-center border-0 bg-transparent p-0 group ${
+                    isClickable ? 'cursor-pointer' : 'cursor-default'
+                  } disabled:opacity-100`}
                   title={`Stage ${stage.number}: ${stage.name}`}
                 >
                   {/* Circle Indicator */}
@@ -67,7 +68,7 @@ export default function StageProgress({ currentStage = 1, stageResults = [], onS
                   >
                     {stage.name}
                   </span>
-                </div>
+                </button>
 
                 {/* Connecting Line between stages */}
                 {index < STAGES.length - 1 && (

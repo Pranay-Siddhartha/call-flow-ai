@@ -8,6 +8,12 @@ dist/
 build/
 */dist/
 */build/
+coverage/
+*/coverage/
+playwright-report/
+test-results/
+*/playwright-report/
+*/test-results/
 
 # Local Environment Variables & Secrets
 .env

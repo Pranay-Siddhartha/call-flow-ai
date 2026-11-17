@@ -1,9 +1,10 @@
 const express = require('express');
-const router = express.Router();
-const { getStageSuggestion, getCallSummary } = require('../lib/ai');
+const defaultAiService = require('../lib/ai');
 
-// POST /api/ai/suggest
-router.post('/suggest', async (req, res, next) => {
+function createAiRouter({ aiService = defaultAiService } = {}) {
+  const router = express.Router();
+
+  router.post('/suggest', async (req, res, next) => {
   try {
     const {
       stage_number,
@@ -18,7 +19,7 @@ router.post('/suggest', async (req, res, next) => {
       previousStages
     } = req.body || {};
 
-    const suggestion = await getStageSuggestion({
+    const suggestion = await aiService.getStageSuggestion({
       stageNumber: stage_number ?? stageNumber,
       stageName: stage_name || stageName,
       stagePurpose: stage_purpose || stagePurpose,
@@ -30,10 +31,9 @@ router.post('/suggest', async (req, res, next) => {
   } catch (err) {
     next(err);
   }
-});
+  });
 
-// POST /api/ai/summarize
-router.post('/summarize', async (req, res, next) => {
+  router.post('/summarize', async (req, res, next) => {
   try {
     const { stages } = req.body || {};
     const stagesList = Array.isArray(stages)
@@ -42,12 +42,15 @@ router.post('/summarize', async (req, res, next) => {
       ? req.body
       : [];
 
-    const summary = await getCallSummary(stagesList);
+    const summary = await aiService.getCallSummary(stagesList);
 
     return res.json({ summary });
   } catch (err) {
     next(err);
   }
-});
+  });
 
-module.exports = router;
+  return router;
+}
+
+module.exports = createAiRouter;

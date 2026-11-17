@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { PhoneOff, ArrowLeft, Building2, User, Clock, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { PhoneOff, ArrowLeft, Building2, User, Clock, AlertTriangle, CheckCircle2, Headphones } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { STAGES, getStageByNumber } from '../data/stages';
 import StageProgress from '../components/StageProgress';
 import StageCard from '../components/StageCard';
@@ -37,6 +38,7 @@ export default function CallerScreen() {
   const [showEndModal, setShowEndModal] = useState(false);
   const [isEndingCall, setIsEndingCall] = useState(false);
   const [isSavingOutcome, setIsSavingOutcome] = useState(false);
+  const [actionError, setActionError] = useState(null);
 
   // Live Call Timer
   const [secondsElapsed, setSecondsElapsed] = useState(0);
@@ -166,6 +168,7 @@ export default function CallerScreen() {
   // Handle stage outcome tap (records what happened)
   const handleSelectOutcome = async (outcomeLabel) => {
     setIsSavingOutcome(true);
+    setActionError(null);
 
     try {
       await saveStage({
@@ -186,6 +189,7 @@ export default function CallerScreen() {
       }));
     } catch (err) {
       console.error('Error saving stage outcome:', err);
+      setActionError(err.message || 'Could not save this stage. Please try again.');
     } finally {
       setIsSavingOutcome(false);
     }
@@ -193,6 +197,8 @@ export default function CallerScreen() {
 
   // Advance to next stage (or trigger close at stage 8)
   const handleNextStage = async () => {
+    setActionError(null);
+
     // If words or notes were typed but no outcome tapped yet, auto-save as recorded
     if (currentStageData.prospectWords || currentStageData.callerNotes || currentStageData.outcome) {
       try {
@@ -204,7 +210,9 @@ export default function CallerScreen() {
           aiSuggestion: currentStageData.aiSuggestion,
         });
       } catch (err) {
-        console.warn('Auto-save before next stage error:', err);
+        console.error('Auto-save before next stage error:', err);
+        setActionError(err.message || 'Could not save this stage. Please try again.');
+        return;
       }
     }
 
@@ -218,19 +226,20 @@ export default function CallerScreen() {
   // End Call confirmed from modal
   const handleEndCallSubmit = async ({ final_outcome, notes }) => {
     setIsEndingCall(true);
+    setActionError(null);
     try {
       await closeCall({
         finalOutcome: final_outcome,
         notes: notes,
         status: 'completed',
       });
+      setShowEndModal(false);
       navigate(`/history/${callId}`);
     } catch (err) {
       console.error('Error ending call:', err);
-      navigate(`/history/${callId}`);
+      setActionError(err.message || 'Could not end the call. Please try again.');
     } finally {
       setIsEndingCall(false);
-      setShowEndModal(false);
     }
   };
 
@@ -243,10 +252,17 @@ export default function CallerScreen() {
   return (
     <div className="flex-1 flex flex-col min-h-0 bg-[#F8FAFC]">
       {/* Top Call Info & Control Banner */}
-      <div className="bg-slate-900 text-white px-4 sm:px-6 py-3 border-b border-slate-800 shadow-sm sticky top-16 z-30">
-        <div className="max-w-5xl mx-auto flex items-center justify-between gap-4">
+      <div className="bg-slate-900 text-white px-4 sm:px-6 py-3 border-b border-slate-800 shadow-sm sticky top-0 z-30">
+        <div className="max-w-5xl mx-auto flex items-center justify-between gap-3 sm:gap-4">
           {/* Prospect Identity */}
-          <div className="flex items-center gap-3 min-w-0">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+            <Link
+              to="/"
+              aria-label="Call Flow AI home"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#0029FF] text-white shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-300"
+            >
+              <Headphones className="h-5 w-5" />
+            </Link>
             <div className="w-9 h-9 rounded-full bg-blue-600/30 border border-blue-400/40 flex items-center justify-center text-blue-300 shrink-0">
               <User className="w-5 h-5" />
             </div>
@@ -294,7 +310,7 @@ export default function CallerScreen() {
       />
 
       {/* Main Stage Content (Scrollable) */}
-      <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-6 pb-36">
+      <div className="flex-1 min-h-0 overflow-y-auto px-4 sm:px-6 py-6">
         <div className="max-w-4xl mx-auto space-y-5">
           {/* Back to previous stage navigation bar */}
           <div className="flex items-center justify-between text-xs text-slate-500 font-medium px-1">
@@ -342,7 +358,12 @@ export default function CallerScreen() {
       </div>
 
       {/* Bottom Sticky Outcome Actions */}
-      <div className="fixed bottom-0 left-0 right-0 z-30 shadow-2xl">
+      <div className="sticky bottom-0 z-30 shrink-0 shadow-2xl">
+        {actionError && (
+          <p role="alert" className="border-t border-rose-200 bg-rose-50 px-4 py-2 text-center text-sm text-rose-800">
+            {actionError}
+          </p>
+        )}
         <OutcomeButtons
           stage={activeStageObject}
           selectedOutcome={currentStageData.outcome}
@@ -359,6 +380,7 @@ export default function CallerScreen() {
         onClose={() => setShowEndModal(false)}
         onEnd={handleEndCallSubmit}
         isSubmitting={isEndingCall}
+        error={actionError}
       />
     </div>
   );

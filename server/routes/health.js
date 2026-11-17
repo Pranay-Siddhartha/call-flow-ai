@@ -1,5 +1,4 @@
 const express = require('express');
-const router = express.Router();
 
 const handleHealthCheck = (req, res) => {
   res.json({
@@ -10,7 +9,11 @@ const handleHealthCheck = (req, res) => {
   });
 };
 
-router.get('/', handleHealthCheck);
-router.get('/health', handleHealthCheck);
+function createHealthRouter() {
+  const router = express.Router();
+  router.get('/', handleHealthCheck);
+  router.get('/health', handleHealthCheck);
+  return router;
+}
 
-module.exports = router;
+module.exports = createHealthRouter;

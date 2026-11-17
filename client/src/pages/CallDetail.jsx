@@ -79,6 +79,7 @@ export default function CallDetail() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSummarizing, setIsSummarizing] = useState(false);
   const [error, setError] = useState(null);
+  const [summaryError, setSummaryError] = useState(null);
 
   const fetchDetail = async () => {
     setIsLoading(true);
@@ -100,6 +101,8 @@ export default function CallDetail() {
         const val = stagesDataRes.value;
         const list = Array.isArray(val) ? val : val?.stages || val?.data || [];
         setStageResults(list);
+      } else {
+        throw new Error(stagesDataRes.reason?.message || 'Failed to load call stages');
       }
     } catch (err) {
       console.warn('Error loading call details:', err);
@@ -116,6 +119,7 @@ export default function CallDetail() {
   // Request or generate AI Call Summary
   const handleGenerateSummary = async () => {
     setIsSummarizing(true);
+    setSummaryError(null);
     try {
       const res = await getCallSummary({ call_id: id });
       const summaryText = res?.summary || res?.call_summary || res?.data?.summary;
@@ -124,12 +128,7 @@ export default function CallDetail() {
       }
     } catch (err) {
       console.warn('AI summary generation error:', err);
-      // Fallback preview
-      setCall((prev) => ({
-        ...prev,
-        call_summary:
-          'High interest demonstrated in workflow automation. Prospect requested a follow-up demo next week with department stakeholders.',
-      }));
+      setSummaryError(err.message || 'Could not generate a call summary. Please try again.');
     } finally {
       setIsSummarizing(false);
     }
@@ -140,6 +139,21 @@ export default function CallDetail() {
       <div className="flex-1 flex flex-col items-center justify-center gap-3 py-24 text-slate-400">
         <Loader2 className="w-8 h-8 text-[#0029FF] animate-spin" />
         <span className="text-sm font-medium">Loading call details...</span>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center gap-4 px-4 py-24 text-center">
+        <p role="alert" className="text-sm font-medium text-rose-700">{error}</p>
+        <button
+          type="button"
+          onClick={fetchDetail}
+          className="rounded-xl bg-[#0029FF] px-4 py-2 text-sm font-bold text-white hover:bg-blue-700"
+        >
+          Retry
+        </button>
       </div>
     );
   }
@@ -268,6 +282,10 @@ export default function CallDetail() {
             )}
           </button>
         </div>
+
+        {summaryError && (
+          <p role="alert" className="text-sm font-medium text-rose-700">{summaryError}</p>
+        )}
 
         {call?.call_summary ? (
           <div className="bg-white/80 rounded-2xl p-4 border border-blue-100/80 text-sm text-slate-800 leading-relaxed font-medium whitespace-pre-wrap">
